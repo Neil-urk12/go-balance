@@ -6,6 +6,16 @@ import (
 	"sync"
 )
 
+func main() {
+	lb := NewLoadBalancer(
+	    [
+        "localhost:8080",
+        "localhost:8081",
+        "localhost:8082",
+	    ]	
+		)
+}
+
 func NewLoadBalancer(addrs []string) *LoadBalancer {
 	lb := &LoadBalancer{}
 
@@ -28,10 +38,6 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 	}
 
 	return lb
-}
-
-func main() {
-
 }
 
 type Backend struct {
