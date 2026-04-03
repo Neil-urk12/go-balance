@@ -52,7 +52,7 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 		}
 		lb.backends = append(lb.backends, &Backend{
 			URL:          u,
-			Alive:        true,
+			Alive:        false,
 			ReverseProxy: proxy,
 		})
 	}
