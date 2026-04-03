@@ -112,9 +112,9 @@ func (lb *LoadBalancer) StartHealthChecks(interval time.Duration) {
 
 func main() {
 	lb := NewLoadBalancer([]string{
-		"localhost:8080",
-		"localhost:8081",
-		"localhost:8082",
+		"http://localhost:8081",
+		"http://localhost:8082",
+		"http://localhost:8083",
 	})
 
 	lb.StartHealthChecks(5 * time.Second)
