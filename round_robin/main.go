@@ -6,14 +6,41 @@ import (
 	"sync"
 )
 
+type Backend struct {
+	URL          *url.URL
+	Alive        bool
+	ReverseProxy *httputil.ReverseProxy
+	mux          sync.RWMutex
+	//connections  int 
+}
+
+type LoadBalancer struct {
+	backends []*Backend
+	current  int
+	mux      sync.Mutex
+}
+
+func (b *Backend) SetAlive (alive bool) {
+  b.mux.Lock()
+  b.Alive = alive
+  b.mux.Unlock()
+}
+
+func (b *Backend) IsAlive () bool {
+  b.mux.RLock()
+  defer b.mux.RUnlock()
+  return b.Alive
+}
+
 func main() {
 	lb := NewLoadBalancer(
-	    [
-        "localhost:8080",
-        "localhost:8081",
-        "localhost:8082",
-	    ]	
-		)
+	  [
+      "localhost:8080",
+      "localhost:8081",
+      "localhost:8082",
+	  ]	
+	)
+
 }
 
 func NewLoadBalancer(addrs []string) *LoadBalancer {
@@ -40,16 +67,6 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 	return lb
 }
 
-type Backend struct {
-	URL          *url.URL
-	Alive        bool
-	ReverseProxy *httputil.ReverseProxy
-	mux          sync.RWMutex
-	//connections  int 
-}
 
-type LoadBalancer struct {
-	backends []*Backend
-	current  int
-	mux      sync.Mutex
-}
+
+
