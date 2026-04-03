@@ -93,7 +93,6 @@ func (lb *LoadBalancer) StartHealthChecks(interval time.Duration) {
 		go func(backend *Backend) {
 			for range time.Tick(interval) {
 				conn, err := net.DialTimeout("tcp", backend.URL.Host, 2*time.Second)
-
 				if err != nil {
 					if backend.IsAlive() {
 						log.Printf("[health] backend %s is DOWN", backend.URL)
@@ -102,7 +101,7 @@ func (lb *LoadBalancer) StartHealthChecks(interval time.Duration) {
 				} else {
 					conn.Close()
 					if !backend.IsAlive() {
-						log.Printf("[health] backend %d is UP", backend.URL)
+						log.Printf("[health] backend %s is UP", backend.URL)
 					}
 					backend.SetAlive(true)
 				}
