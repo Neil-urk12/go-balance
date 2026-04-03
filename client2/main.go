@@ -6,7 +6,7 @@ import (
 )
 
 func statusCheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Client 1 Server is healthy")
+	fmt.Fprintf(w, "Client 2 Server is healthy")
 }
 
 func headers(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +21,6 @@ func main() {
 	http.HandleFunc("/health", statusCheckHandler)
 	http.HandleFunc("/headers", headers)
 
-	fmt.Print("Client 1 server is running")
+	fmt.Print("Client 2 server is running")
 	http.ListenAndServe(":8083", nil)
 }
