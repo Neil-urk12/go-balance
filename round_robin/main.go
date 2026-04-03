@@ -32,17 +32,6 @@ func (b *Backend) IsAlive () bool {
   return b.Alive
 }
 
-func main() {
-	lb := NewLoadBalancer(
-	  [
-      "localhost:8080",
-      "localhost:8081",
-      "localhost:8082",
-	  ]	
-	)
-
-}
-
 func NewLoadBalancer(addrs []string) *LoadBalancer {
 	lb := &LoadBalancer{}
 
@@ -67,6 +56,64 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 	return lb
 }
 
+func (lb *LoadBalancer) NextBackend() *Backend {
+	lb.mux.Lock()
+	defer lb.mux.Unlock()
 
+	total := len(lb.backends)
+	for i := 0; i < total; i++ {
+    idx := (lb.current + 1) % total
+    
+    if lb.backends[idx].IsAlive() {
+    	lb.current = (idx + 1)  % total
+    	return lb.backends[idx]
+    }
+	}
+
+	return nil
+}
+
+func (lb *LoadBalancer) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	backend := lb.NextBackend()
+	if backend == nil {
+		http.Error(w, "There are no healthy backends available", http.StatusServiceUnavailable)
+		return
+	}
+
+	log.Printf("[lb] -> forwarding to %s", backend.URL)
+	backend.ReverseProxy.ServeHttp(w, r)
+}
+
+func (lb *LoadBalancer) StartHealthChecks(interval time.Duration) {
+	for _, b := range lb.backends {
+		go func(backend *Backend) {
+			for range time.Tick(interval) {
+				conn, err := net.DialTimeout("tcp", backend.URL.Host, 2*time.Second)
+
+				if err != nil {
+					if backend.IsAlive() [
+            log.Printf("[health] backend %s is DOWN", backend.URL)
+	        ]
+	        backend.SetAlive(false)
+				} else {
+          conn.Close()
+          if !backend.IsAlive() {
+            log.Printf("[health] backend %d is UP", backend.URL)
+          }
+          backend.SetAlive(true)
+			  }
+			}
+		} (b)
+	}
+}
+
+func main() {
+	lb := NewLoadBalancer([]string {
+      "localhost:8080",
+      "localhost:8081",
+      "localhost:8082",
+	})
+
+}
 
 
