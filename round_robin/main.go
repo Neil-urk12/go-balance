@@ -114,6 +114,10 @@ func main() {
       "localhost:8082",
 	})
 
+	lb.StartHealthChecks(5 *time.Second)
+
+	log.Printf("[lb] Load balancer is listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", lb))
 }
 
 
