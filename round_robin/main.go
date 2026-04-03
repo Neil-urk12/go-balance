@@ -60,7 +60,7 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 	return lb
 }
 
-func (lb *LoadBalancer) NextBackend() *Server {
+func (lb *LoadBalancer) NextServer() *Server {
 	lb.mux.Lock()
 	defer lb.mux.Unlock()
 
@@ -78,7 +78,7 @@ func (lb *LoadBalancer) NextBackend() *Server {
 }
 
 func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	server := lb.NextBackend()
+	server := lb.NextServer()
 	if server == nil {
 		http.Error(w, "There are no healthy backends available", http.StatusServiceUnavailable)
 		return
