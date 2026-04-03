@@ -26,6 +26,8 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 			ReverseProxy: proxy,
 		})
 	}
+
+	return lb
 }
 
 func main() {
