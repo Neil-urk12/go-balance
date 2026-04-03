@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type Backend struct {
+type Server struct {
 	URL          *url.URL
 	Alive        bool
 	ReverseProxy *httputil.ReverseProxy
@@ -19,21 +19,21 @@ type Backend struct {
 }
 
 type LoadBalancer struct {
-	backends []*Backend
-	current  int
-	mux      sync.Mutex
+	servers []*Server
+	current int
+	mux     sync.Mutex
 }
 
-func (b *Backend) SetAlive(alive bool) {
-	b.mux.Lock()
-	b.Alive = alive
-	b.mux.Unlock()
+func (s *Server) SetAlive(alive bool) {
+	s.mux.Lock()
+	s.Alive = alive
+	s.mux.Unlock()
 }
 
-func (b *Backend) IsAlive() bool {
-	b.mux.RLock()
-	defer b.mux.RUnlock()
-	return b.Alive
+func (s *Server) IsAlive() bool {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+	return s.Alive
 }
 
 func NewLoadBalancer(addrs []string) *LoadBalancer {
@@ -50,7 +50,7 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 			log.Printf("[proxy error] %v%", err)
 			http.Error(w, "Backend unavailable", http.StatusBadGateway)
 		}
-		lb.backends = append(lb.backends, &Backend{
+		lb.servers = append(lb.servers, &Server{
 			URL:          u,
 			Alive:        false,
 			ReverseProxy: proxy,
@@ -60,17 +60,17 @@ func NewLoadBalancer(addrs []string) *LoadBalancer {
 	return lb
 }
 
-func (lb *LoadBalancer) NextBackend() *Backend {
+func (lb *LoadBalancer) NextBackend() *Server {
 	lb.mux.Lock()
 	defer lb.mux.Unlock()
 
-	total := len(lb.backends)
+	total := len(lb.servers)
 	for i := 0; i < total; i++ {
 		idx := (lb.current + 1) % total
 
-		if lb.backends[idx].IsAlive() {
+		if lb.servers[idx].IsAlive() {
 			lb.current = (idx + 1) % total
-			return lb.backends[idx]
+			return lb.servers[idx]
 		}
 	}
 
@@ -78,31 +78,31 @@ func (lb *LoadBalancer) NextBackend() *Backend {
 }
 
 func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	backend := lb.NextBackend()
-	if backend == nil {
+	server := lb.NextBackend()
+	if server == nil {
 		http.Error(w, "There are no healthy backends available", http.StatusServiceUnavailable)
 		return
 	}
 
-	log.Printf("[lb] -> forwarding to %s", backend.URL)
-	backend.ReverseProxy.ServeHTTP(w, r)
+	log.Printf("[lb] -> forwarding to %s", server.URL)
+	server.ReverseProxy.ServeHTTP(w, r)
 }
 
 func (lb *LoadBalancer) StartHealthChecks(interval time.Duration) {
-	for _, b := range lb.backends {
-		go func(backend *Backend) {
+	for _, s := range lb.servers {
+		go func(server *Server) {
 			for range time.Tick(interval) {
-				conn, err := net.DialTimeout("tcp", backend.URL.Host, 2*time.Second)
+				conn, err := net.DialTimeout("tcp", server.URL.Host, 2*time.Second)
 				if err != nil {
-					log.Printf("[health] backend %s is DOWN", backend.URL)
-					backend.SetAlive(false)
+					log.Printf("[health] backend %s is DOWN", server.URL)
+					server.SetAlive(false)
 				} else {
 					conn.Close()
-					log.Printf("[health] backend %s is UP", backend.URL)
-					backend.SetAlive(true)
+					log.Printf("[health] backend %s is UP", server.URL)
+					server.SetAlive(true)
 				}
 			}
-		}(b)
+		}(s)
 	}
 }
 
